@@ -17,7 +17,6 @@ The template provides a starting point for bringing your SageMaker Pipeline deve
 |   |-- _utils.py
 |   `-- __version__.py
 |-- README.md
-|-- sagemaker-pipelines-project.ipynb
 |-- setup.cfg
 |-- setup.py
 |-- tests
