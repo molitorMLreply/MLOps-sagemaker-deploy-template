@@ -191,27 +191,20 @@ def get_pipeline(
         py_version="py3",
         instance_type=training_instance_type,
     )
-    xgb_train = Estimator(
-        image_uri=image_uri,
-        instance_type=training_instance_type,
-        instance_count=1,
-        output_path=model_path,
-        base_job_name=f"{base_job_prefix}/abalone-train",
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
-    xgb_train.set_hyperparameters(
-        objective="reg:linear",
-        num_round=50,
-        max_depth=5,
-        eta=0.2,
-        gamma=4,
-        min_child_weight=6,
-        subsample=0.7,
-        silent=0,
-    )
-    step_args = xgb_train.fit(
-        inputs={
+
+    # Custom Training job:
+    from sagemaker.sklearn.estimator import SKLearn
+    xgb_train_job = SKLearn(
+        os.path.join(BASE_DIR, "train.py"),
+        role = role,
+        sagemaker_session = pipeline_session,
+        instance_type = "ml.m5.large",
+        framework_version="1.2-1",
+        py_version="py3",
+        base_job_name = "customized-regression-training"
+        )
+
+    step_args_new = xgb_train_job.fit(inputs={
             "train": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
                     "train"
@@ -224,11 +217,10 @@ def get_pipeline(
                 ].S3Output.S3Uri,
                 content_type="text/csv",
             ),
-        },
-    )
+        },)
     step_train = TrainingStep(
-        name="TrainAbaloneModel",
-        step_args=step_args,
+        name="TrainModelWithCustomTrainScript",
+        step_args=step_args_new,
     )
 
     # processing step for evaluation
@@ -240,6 +232,7 @@ def get_pipeline(
         base_job_name=f"{base_job_prefix}/script-abalone-eval",
         sagemaker_session=pipeline_session,
         role=role,
+        
     )
     step_args = script_eval.run(
         inputs=[

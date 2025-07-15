@@ -7,8 +7,6 @@ import tarfile
 
 import numpy as np
 import pandas as pd
-import xgboost
-
 from sklearn.metrics import mean_squared_error
 
 logger = logging.getLogger()
@@ -23,17 +21,18 @@ if __name__ == "__main__":
     with tarfile.open(model_path) as tar:
         tar.extractall(path=".")
 
-    logger.debug("Loading xgboost model.")
-    model = pickle.load(open("xgboost-model", "rb"))
+    logger.debug("Loading model.")
+    with open("model.pkl", "rb") as file:
+        model = pickle.load(file)
 
     logger.debug("Reading test data.")
     test_path = "/opt/ml/processing/test/test.csv"
     df = pd.read_csv(test_path, header=None)
 
     logger.debug("Reading test data.")
-    y_test = df.iloc[:, 0].to_numpy()
+    y_test = df.iloc[:, 0]
     df.drop(df.columns[0], axis=1, inplace=True)
-    X_test = xgboost.DMatrix(df.values)
+    X_test = df
 
     logger.info("Performing predictions against test data.")
     predictions = model.predict(X_test)
