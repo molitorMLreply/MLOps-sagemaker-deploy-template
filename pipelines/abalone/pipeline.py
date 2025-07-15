@@ -199,7 +199,7 @@ def get_pipeline(
         role = role,
         sagemaker_session = pipeline_session,
         instance_type = "ml.m5.large",
-        framework_version="1.2-1",
+        framework_version="1.0-1",
         py_version="py3",
         base_job_name = "customized-regression-training"
         )
