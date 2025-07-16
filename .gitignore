@@ -11,4 +11,3 @@ venv/*
 .ipynb
 */.ipynb
 sagemaker-pipelines-project.ipynb
-requirements.txt
