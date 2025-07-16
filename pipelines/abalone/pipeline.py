@@ -205,11 +205,7 @@ def get_pipeline(
         py_version="py3",
         base_job_name = "customized-regression-training",
         hyperparameters = {},
-<<<<<<< HEAD
         dependencies = []
-=======
-        dependencies = [os.path.join(BASE_DIR, "train_dependencies_requirements.txt")]
->>>>>>> main
         )
 
     from sagemaker.tuner import HyperparameterTuner, IntegerParameter, CategoricalParameter, ContinuousParameter
