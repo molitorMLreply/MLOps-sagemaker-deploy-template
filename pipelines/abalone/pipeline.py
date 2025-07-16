@@ -194,8 +194,10 @@ def get_pipeline(
 
     # Custom Training job:
     from sagemaker.sklearn.estimator import SKLearn
+    TRAIN_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     sklearn_estimator = SKLearn(
-        os.path.join(BASE_DIR, "train.py"),
+        "train.py",
+        source_dir = os.path.join(TRAIN_BASE_DIR, "train_dependencies"),
         role = role,
         sagemaker_session = pipeline_session,
         instance_type = "ml.m5.large",
@@ -203,7 +205,7 @@ def get_pipeline(
         py_version="py3",
         base_job_name = "customized-regression-training",
         hyperparameters = {},
-        dependencies = [os.path.join(BASE_DIR, "train_dependencies_requirements.txt")]
+        dependencies = []
         )
 
     from sagemaker.tuner import HyperparameterTuner, IntegerParameter, CategoricalParameter, ContinuousParameter
