@@ -202,7 +202,8 @@ def get_pipeline(
         framework_version="1.0-1",
         py_version="py3",
         base_job_name = "customized-regression-training",
-        hyperparameters = {}
+        hyperparameters = {},
+        dependencies = [os.path.join(BASE_DIR, "train_dependencies/requirements.txt")]
         )
 
     from sagemaker.tuner import HyperparameterTuner, IntegerParameter, CategoricalParameter, ContinuousParameter
@@ -212,18 +213,17 @@ def get_pipeline(
         objective_metric_name="validation:rmse",
         hyperparameter_ranges = {
             "learning-rate": ContinuousParameter(0.001, 0.2),
-            "model-type": CategoricalParameter(["xgboost", "randomforest", "mlp"])
+            "epochs": IntegerParameter(min_value = 5, max_value = 10),
+            "model-type": CategoricalParameter(["xgboost", "pytorch", "mlp"])
         },
         metric_definitions=[
             {"Name": "validation:rmse", "Regex":"validation:rmse=([0-9\\.]+)"}
         ],
         objective_type="Minimize",
-        max_jobs = 3,
-        max_parallel_jobs=3
+        max_jobs = 2,
+        max_parallel_jobs=2
     )
     from sagemaker.workflow.steps import TuningStep
-    #from sagemaker.workflow.parameters import ParameterString, ParameterInteger
-
     step_train = TuningStep(
         name="HPOTraining",
         tuner=hpo,
@@ -287,7 +287,7 @@ def get_pipeline(
         outputs=[
             ProcessingOutput(output_name="evaluation", source="/opt/ml/processing/evaluation"),
         ],
-        code=os.path.join(BASE_DIR, "evaluate.py"),
+        code=os.path.join(BASE_DIR, "evaluate.py")
     )
     evaluation_report = PropertyFile( # type: ignore
         name="AbaloneEvaluationReport",
@@ -312,6 +312,7 @@ def get_pipeline(
     model = Model(
         image_uri=image_uri,
         model_data=step_train.get_top_model_s3_uri(top_k=0, s3_bucket = default_bucket),
+        #model_data = step_train.properties.ModelArtifacts.S3ModelArtifacts,
         sagemaker_session=pipeline_session,
         role=role,
     )
@@ -336,7 +337,7 @@ def get_pipeline(
             property_file=evaluation_report,
             json_path="regression_metrics.mse.value"
         ),
-        right=6.0,
+        right=10.0,
     )
     step_cond = ConditionStep(
         name="CheckMSEAbaloneEvaluation",
