@@ -26,12 +26,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=100)
     parser.add_argument('--learning-rate', type=float, default=0.1)
-<<<<<<< HEAD
-    #parser.add_argument('--model-type', type=str, required=True)
-    parser.add_argument('--model-type', type=str, default="xgboost")
-=======
     parser.add_argument('--model-type', type=str, required=True)
->>>>>>> main
     # an alternative way to load hyperparameters via SM_HPS environment variable.
     parser.add_argument('--sm-hps', type=json.loads, default=os.environ['SM_HPS'])
 
@@ -54,7 +49,6 @@ def main():
     learning_rate = args.learning_rate
     model_type = args.model_type
     if model_type == "xgboost":
-<<<<<<< HEAD
         from xgboost import XGBRegressor
         model = XGBRegressor(learning_rate = learning_rate)
         model.fit(X = X_train, y = y_train)
@@ -138,18 +132,6 @@ def main():
     else:
         raise TypeError("Model is not one of sklearn, xgboost, or pytorch")
     
-=======
-        model = GradientBoostingRegressor(learning_rate=learning_rate)
-    elif model_type == "randomforest":
-        model = RandomForestRegressor()
-    elif model_type == "mlp":
-        model = MLPRegressor(learning_rate_init=learning_rate)
-    model.fit(X = X_train, y = y_train)
-    value = mean_squared_error(y_true = y_test, y_pred = model.predict(X_test))
-    print(f"validation:rmse={value}")
-    with open(os.path.join(args.model_dir, "model.pkl"), "wb") as file:
-        pickle.dump(model, file)
->>>>>>> main
 
 if __name__ =='__main__':
     main()
