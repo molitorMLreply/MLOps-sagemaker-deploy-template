@@ -185,7 +185,7 @@ def get_pipeline(
     # training step for generating model artifacts
     model_path = f"s3://{sagemaker_session.default_bucket()}/{base_job_prefix}/AbaloneTrain"
     image_uri = sagemaker.image_uris.retrieve(
-        framework="xgboost",
+        framework="sklearn",
         region=region,
         version="1.0-1",
         py_version="py3",
@@ -194,18 +194,40 @@ def get_pipeline(
 
     # Custom Training job:
     from sagemaker.sklearn.estimator import SKLearn
-    xgb_train_job = SKLearn(
+    sklearn_estimator = SKLearn(
         os.path.join(BASE_DIR, "train.py"),
         role = role,
         sagemaker_session = pipeline_session,
         instance_type = "ml.m5.large",
         framework_version="1.0-1",
         py_version="py3",
-        base_job_name = "customized-regression-training"
+        base_job_name = "customized-regression-training",
+        hyperparameters = {}
         )
 
-    step_args_new = xgb_train_job.fit(inputs={
-            "train": TrainingInput(
+    from sagemaker.tuner import HyperparameterTuner, IntegerParameter, CategoricalParameter, ContinuousParameter
+
+    hpo = HyperparameterTuner(
+        estimator = sklearn_estimator,
+        objective_metric_name="validation:rmse",
+        hyperparameter_ranges = {
+            "learning-rate": ContinuousParameter(0.001, 0.2),
+            "model-type": CategoricalParameter(["xgboost", "randomforest", "mlp"])
+        },
+        metric_definitions=[
+            {"Name": "validation:rmse", "Regex":"validation:rmse=([0-9\\.]+)"}
+        ],
+        objective_type="Minimize",
+        max_jobs = 3,
+        max_parallel_jobs=3
+    )
+    from sagemaker.workflow.steps import TuningStep
+    #from sagemaker.workflow.parameters import ParameterString, ParameterInteger
+
+    step_train = TuningStep(
+        name="HPOTraining",
+        tuner=hpo,
+        inputs={"train": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
                     "train"
                 ].S3Output.S3Uri,
@@ -216,12 +238,26 @@ def get_pipeline(
                     "validation"
                 ].S3Output.S3Uri,
                 content_type="text/csv",
-            ),
-        },)
-    step_train = TrainingStep(
-        name="TrainModelWithCustomTrainScript",
-        step_args=step_args_new,
+            ),}
     )
+    #step_args_new = sklearn_estimator.fit(inputs={
+    #        "train": TrainingInput(
+    #            s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
+    #                "train"
+    #            ].S3Output.S3Uri,
+    #            content_type="text/csv",
+    #        ),
+    #        "validation": TrainingInput(
+    #            s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
+    #                "validation"
+    #            ].S3Output.S3Uri,
+    #            content_type="text/csv",
+    #        ),
+    #    },)
+    #step_train = TrainingStep(
+    #    name="TrainModelWithCustomTrainScript",
+    #    step_args=step_args_new,
+    #)
 
     # processing step for evaluation
     script_eval = ScriptProcessor(
@@ -237,7 +273,8 @@ def get_pipeline(
     step_args = script_eval.run(
         inputs=[
             ProcessingInput(
-                source=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+                #source=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+                source=step_train.get_top_model_s3_uri(top_k=0, s3_bucket = default_bucket),
                 destination="/opt/ml/processing/model",
             ),
             ProcessingInput(
@@ -252,7 +289,7 @@ def get_pipeline(
         ],
         code=os.path.join(BASE_DIR, "evaluate.py"),
     )
-    evaluation_report = PropertyFile(
+    evaluation_report = PropertyFile( # type: ignore
         name="AbaloneEvaluationReport",
         output_name="evaluation",
         path="evaluation.json",
@@ -274,7 +311,7 @@ def get_pipeline(
     )
     model = Model(
         image_uri=image_uri,
-        model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+        model_data=step_train.get_top_model_s3_uri(top_k=0, s3_bucket = default_bucket),
         sagemaker_session=pipeline_session,
         role=role,
     )
