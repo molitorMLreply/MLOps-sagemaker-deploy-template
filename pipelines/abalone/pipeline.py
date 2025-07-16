@@ -194,10 +194,10 @@ def get_pipeline(
 
     # Custom Training job:
     from sagemaker.sklearn.estimator import SKLearn
-    TRAIN_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    #TRAIN_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     sklearn_estimator = SKLearn(
         "train.py",
-        source_dir = os.path.join(TRAIN_BASE_DIR, "train_dependencies"),
+        source_dir = "pipelines/abalone/train_dependencies",
         role = role,
         sagemaker_session = pipeline_session,
         instance_type = "ml.m5.large",
