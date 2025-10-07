@@ -15,6 +15,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
+from helper import save_fn
+
 def model_fn(model_dir):
     model_path = os.path.join(model_dir, "model.pkl")
     return pickle.load(model_path)
@@ -115,22 +117,7 @@ def main():
         predictions = model(X_test_tensor)
         value = torch.mean((y_test_tensor - predictions) ** 2 )
     print(f"validation:rmse={value}")
-    if model_type == "pytorch":
-        general_model_type = "pytorch"
-    elif model_type == "xgboost":
-        general_model_type = "xgboost"
-    else:
-        general_model_type = "sklearn"
-    metadata = {"model_type": general_model_type}
-    with open(os.path.join(args.model_dir, "model_metadata.json"), "w") as f:
-        json.dump(metadata, f)
-    if (general_model_type == "sklearn") or (general_model_type == "xgboost"):
-        with open(os.path.join(args.model_dir, "model.pkl"), "wb") as file:
-            pickle.dump(model, file)
-    elif general_model_type == "pytorch":
-        torch.save(model.state_dict(), os.path.join(args.model_dir, "model.pth"))
-    else:
-        raise TypeError("Model is not one of sklearn, xgboost, or pytorch")
+    save_fn(model, args.model_type, args.model_dir)
     
 
 if __name__ =='__main__':
